@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+.tsr-work/
+tsr-config.yaml
+tsr-investigation.yaml
+tsr-investigation.xlsx
+tsr-investigation.csv
+tsr-investigation.md
+*.pdf
+must-gather.local.*/
