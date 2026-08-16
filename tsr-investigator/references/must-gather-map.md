@@ -8,15 +8,19 @@
 初回に `scripts/inventory.py` が `tsr-inventory.yaml` を書く。プラグイン、namespace、cluster-scoped のディレクトリ名、pod ログの有無（件数のみ）、`metrics/` のトップレベルをカタログする。
 所見の調査に入る前にこのファイルを見る。毎回ツリーを `ls` し直さない。カタログは地図であり、所見の判定ではない。
 
+`kind` はよくあるイメージ名へのラベルであり、許可リストではない。unknown や `skipped_top_level` は落とさず、dirname で扱う。
+
 ## このディレクトリの起点
+
+パスは inventory の `plugins[].path` / `dirname` が正。次の glob は Default / PG の例にすぎない。名前が違う、または kind が unknown なら glob を信じない。
 
 ```bash
 MG=<paths.must_gather>   # typically must-gather.local.<id>
-OCP=$(ls -d "$MG"/quay-io-openshift-release-dev-* | head -1)          # MG-Default
-PG=$(ls -d "$MG"/quay-io-pg-next-pg-must-gather-* | head -1)          # MG-PG
+OCP=$(ls -d "$MG"/quay-io-openshift-release-dev-* | head -1)          # MG-Default（例）
+PG=$(ls -d "$MG"/quay-io-pg-next-pg-must-gather-* | head -1)          # MG-PG（例）
 ```
 
-TSR が MG-Default と MG-PG の両方を挙げていれば、「無い」と判定する前に `$OCP` と `$PG` の両方を探す。
+TSR が MG-Default と MG-PG の両方を挙げていれば、「無い」と判定する前に inventory 上の該当プラグインを両方見る。どちらかが無い・名前が違うならその旨を書く。
 
 Data Quality Notice に欠落 gather が書いてあれば、その gather にしか無い情報は判定不能。
 ただし Default/PG に同名 namespace や CR があれば、欠落 gather がなくても検証できる。

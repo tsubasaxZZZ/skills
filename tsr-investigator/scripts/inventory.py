@@ -48,17 +48,25 @@ def main() -> int:
         dest = Path(paths.get("inventory") or root / "tsr-inventory.yaml")
 
     notice = None
+    mg_label = None
     inv_path = Path(paths.get("investigation") or root / "tsr-investigation.yaml")
     investigation = load_investigation(inv_path)
     if investigation:
         meta = investigation.get("meta") or {}
         notice = meta.get("data_quality_notice")
+        mg_label = meta.get("must_gather_label")
 
-    data = build_inventory(mg, data_quality_notice=notice)
+    data = build_inventory(
+        mg,
+        data_quality_notice=notice,
+        report_must_gather_label=mg_label,
+    )
     dump_yaml(data, dest)
     print(f"wrote {dest}", file=sys.stderr)
     for line in inventory_summary_lines(data):
         print(line, file=sys.stderr)
+    if not data.get("plugins"):
+        return 1
     return 0
 
 

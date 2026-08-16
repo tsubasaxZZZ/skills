@@ -9,6 +9,9 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from pathlib import Path
 
+# Substring → short label. Not an allowlist. Unmatched plugins stay
+# kind=unknown and are still cataloged. Do not treat this as the set of
+# gathers that may exist.
 PLUGIN_KINDS: tuple[tuple[str, str], ...] = (
     ("pg-must-gather", "pg-must-gather"),
     ("pg-next-pg", "pg-must-gather"),
@@ -134,13 +137,26 @@ def discover_plugins(must_gather: Path) -> list[Path]:
     return plugins
 
 
+def _skipped_top_level_dirs(must_gather: Path, plugins: list[Path]) -> list[str]:
+    plugin_names = {p.name for p in plugins}
+    skipped: list[str] = []
+    for child in sorted(must_gather.iterdir()):
+        if child.is_dir() and child.name not in plugin_names and not child.name.startswith("."):
+            skipped.append(child.name)
+    return skipped
+
+
 def build_inventory(
     must_gather: Path,
     *,
     data_quality_notice: str | None = None,
+    report_must_gather_label: str | None = None,
 ) -> dict:
     must_gather = must_gather.expanduser().resolve()
-    plugins = [_scan_plugin(p) for p in discover_plugins(must_gather)]
+    plugin_dirs = discover_plugins(must_gather)
+    plugins = [_scan_plugin(p) for p in plugin_dirs]
+    unclassified = [p["dirname"] for p in plugins if (p.get("kind") or "unknown") == "unknown"]
+    skipped = _skipped_top_level_dirs(must_gather, plugin_dirs)
     namespace_index: dict[str, list[str]] = {}
     for plugin in plugins:
         kind = plugin.get("kind") or "unknown"
@@ -149,12 +165,31 @@ def build_inventory(
             names = namespace_index.setdefault(ns, [])
             if label not in names:
                 names.append(label)
+    warnings: list[str] = []
+    if not plugins:
+        warnings.append(
+            "no plugin directories found; catalog is empty. See skipped_top_level."
+        )
+    for dirname in unclassified:
+        warnings.append(
+            f"unclassified plugin (kind=unknown): {dirname}. "
+            "Cataloged anyway. Use dirname; do not skip; do not invent a kind."
+        )
+    for name in skipped:
+        warnings.append(
+            f"skipped top-level directory (not treated as a plugin): {name}. "
+            "Inspect if it looks like a gather plugin."
+        )
     data: dict = {
         "schema_version": 1,
         "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "must_gather_root": str(must_gather),
         "data_quality_notice": data_quality_notice,
+        "report_must_gather_label": report_must_gather_label,
         "plugins": plugins,
+        "unclassified_plugins": unclassified,
+        "skipped_top_level": skipped,
+        "warnings": warnings,
         "namespace_index": dict(sorted(namespace_index.items())),
     }
     return data
@@ -178,4 +213,9 @@ def inventory_summary_lines(data: dict) -> list[str]:
     notice = data.get("data_quality_notice")
     if notice:
         lines.append("data_quality_notice: copied from investigation YAML (not matched to plugins)")
+    label = data.get("report_must_gather_label")
+    if label:
+        lines.append(f"report Must-gather label: {label} (copied; not matched to plugins)")
+    for warning in data.get("warnings") or []:
+        lines.append(f"WARNING: {warning}")
     return lines

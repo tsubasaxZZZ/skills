@@ -51,6 +51,7 @@ TSR レポートは AI が生成した二次情報であり、根拠が must-gat
 - **証拠のない断定をしない**。データが無ければ「判定不能」。レポートに書いてあるだけでは事実にしない。
 - **推測とファクトを混ぜない**。
 - **TOC セクション名を固定リストにしない**。見出しはレポートごとに増減・改名される。一覧は毎回 PDF（seed 結果）から取る。
+- **must-gather のプラグイン kind を固定集合にしない**。inventory の `plugins` が正。unknown は無視せず dirname で扱う。
 - **export はオプション**。ユーザーが「Excel に出して」「CSV で」などと言ったときだけ `export.py` を使う。初回セットアップや一件終了のたびに勝手に出さない。
 - 新規インストールは合意してから。止まるべきは調査方針の決定と、初回セットアップの2問。
 
@@ -83,8 +84,11 @@ config が既にあればセットアップは飛ばし、その内容に従う�
 全所見が `status: not_started` で入る。再 seed しても `status` / `evidence` / `user_notes` などは残る。
 
 続けて `inventory.py` を実行し、must-gather のカタログを `tsr-inventory.yaml` に書く。
-所見の `status` は触らない。Data Quality Notice の文言があればコピーするだけで、欠落 gather との突き合わせはしない。
+所見の `status` は触らない。Data Quality Notice とレポートの Must-gather 欄はコピーするだけで、欠落 gather との突き合わせはしない。
 以降の調査では、毎回 `ls` し直す前にこのカタログを見る。
+
+`kind`（ocp-default / pg-must-gather / cnv / logging）はディレクトリ名の**ラベル用ヒント**であり、存在してよいプラグインの固定集合ではない。
+マッチしなければ `kind: unknown` のままカタログする。`unclassified_plugins` / `skipped_top_level` / `warnings` があればユーザーに伝え、**dirname で扱う**。調査中に `PLUGIN_KINDS` を勝手に増やさない。プラグインが減っていても失敗にしない。正は `plugins` 配列。
 
 YAML を読み、**この PDF から発見したセクションごと**に Priority/Severity 付きの表を出す。必ず添える:
 
@@ -196,6 +200,7 @@ Excel 側のメモを YAML に戻す機能は持たない。正は YAML。
 - 稼働中クラスタへの変更。修正は Runbook にして実行はユーザー。
 - 長いログを絞らず流す。
 - TOC 名を固定分類として記憶する。
+- プラグイン kind のヒント表に無いという理由で gather を無視する。
 - レポート内の矛盾だけで `contradicted` にする。フラグして選ばせる。
 - 頼まれていない export。
 - セットアップで2問以外を長々と聞く。
