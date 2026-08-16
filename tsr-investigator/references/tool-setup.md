@@ -64,6 +64,7 @@ PG の `$PG/metrics/*.json` は omc 対象外。jq で読む。
 
 一次ソースは `paths.investigation`（既定 `tsr-investigation.yaml`）。Markdown ログは使わない。
 must-gather のカタログは `paths.inventory`（既定 `tsr-inventory.yaml`）。`seed.py` のあと `inventory.py` を一度走らせる。
+IS/IS-NOT 表や年表は YAML に埋め込まない。作業ファイルは `.tsr-work/`。
 
 ## export
 

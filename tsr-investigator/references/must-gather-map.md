@@ -164,7 +164,7 @@ omc が期待通りに動かない場合は生ファイルを読む。両方使�
 
 - **ログは必ず絞ってから読む**。`grep -c` で件数、`grep -m 5` で先頭数件、それから前後。
   `host_service_logs/masters/kubelet_service.log` は数十 MB ある。
-- **時刻を揃える**。must-gather 内のログは UTC。レポートの Data collected も UTC。
+- **時刻を揃える**。must-gather 内のログは UTC。レポートの Data collected も UTC。前後関係や WHEN を見たいときだけ `references/timeline.md`。毎回はやらない。
 - **パスは引用符で囲む**。plugin ディレクトリ名に sha256 が含まれる。
 - **見つからなかったときは、探した場所を明示する**。
   「`$OCP/namespaces/openshift-cnv/` も `$PG/namespaces/openshift-cnv/` も無い」のように書く。

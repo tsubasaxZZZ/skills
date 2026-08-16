@@ -24,6 +24,8 @@ TSR with AI レポートの所見を、ユーザーと一緒に一件ずつ調�
 | `tsr-config.yaml` | プロジェクト設定（omc を使うか、export 形式）。スキルはこれを読む |
 | `tsr-investigation.yaml` | **一次ソース**。全所見と調査結果 |
 | `tsr-inventory.yaml` | must-gather のカタログ（プラグイン、namespace、API グループ、ログ有無）。所見は触らない |
+| `references/kt-analysis.md` | 一件の切り分け（IS / IS-NOT）。検証の前に完成表を要求しない |
+| `references/timeline.md` | 時系列の再構成。常用しない。WHEN 不足や前後関係のときだけ提案 |
 | `scripts/export.py` | オプション。ユーザーが指示したときだけ xlsx/csv/md を出す |
 
 スクリプトは `$SKILL/scripts/`。作業ディレクトリは調査対象のプロジェクトルート。
@@ -124,12 +126,12 @@ YAML を読み、**この PDF から発見したセクションごと**に Prior
 ### 3. 一件ごとの調査ループ
 
 1. **解説** — 平易な日本語。「解説の作法」に従う。
-2. **仮説と検証方針** — 痕跡が must-gather のどこに残るはずか。`$OCP` / `$PG` のどちらを見るか。合意を取る。
+2. **切り分けと検証方針** — `references/kt-analysis.md`。IS は inventory と、その所見に既にある `evidence` だけ。空の IS-NOT は次に合意するコマンド。レポートの原因は並列の一候補であり、筆頭に置かない。コマンドを出す前に、候補ごとに「手元の must-gather で棄却できるか」を判定する。棄却不能は `next_actions` に切り出し、深追いしない。痕跡がどのプラグインに残るはずかを示し、合意を取る。
 3. **検証** — 合意したコマンドだけ実行する。空出力も情報。
-4. **判定** — 4値のいずれか。根拠パスを添える。
+4. **判定** — 4値のいずれか。根拠パスを添える。原因仮説の棄却と、所見そのものの反証を混ぜない。
 5. **必要なら外部調査** — 「外部調査の作法」。
-6. **記録** — `tsr-investigation.yaml` のその `id` だけ更新する（一次ソース）。
-7. **次の提案** — 1〜3件挙げて選ばせる。
+6. **記録** — `tsr-investigation.yaml` のその `id` だけ更新する（一次ソース）。IS/IS-NOT 表や年表は YAML に埋め込まない。
+7. **次の提案** — 1〜3件挙げて選ばせる。WHEN が空のまま、または前後関係・引き金を見たいときは、時系列の再構成を提案してよい。毎回ではない。手順は `references/timeline.md`。
 
 検証手順書は持たない。このプロジェクトの地図は `tsr-inventory.yaml`。一般的な歩き方は `references/must-gather-map.md`。
 
@@ -169,6 +171,8 @@ config の `tools.omc` が `skip` なら `omc` を提案しない。
 
 一件更新時に触ってよいフィールド: `status`, `evidence`, `interpretation`, `refs`, `next_actions`, `investigated_on`。
 
+IS / IS-NOT の表と年表は一次ソースにしない。結論だけ上記フィールドに書く。作業ファイルが必要ならプロジェクトの `.tsr-work/`。
+
 セクション名は PDF の TOC 文字列をそのまま `section` / `id`（`{section}#{index}`）に使う。
 
 ## export（オプション）
@@ -202,6 +206,10 @@ Excel 側のメモを YAML に戻す機能は持たない。正は YAML。
 - TOC 名を固定分類として記憶する。
 - プラグイン kind のヒント表に無いという理由で gather を無視する。
 - レポート内の矛盾だけで `contradicted` にする。フラグして選ばせる。
+- IS だけ書いて原因候補に進む。IS-NOT が無い切り分けはしない。
+- レポートが挙げた原因を候補の筆頭に置く。
+- 全所見の IS/IS-NOT や年表を自動で埋める。
+- 時間的な近接だけで因果を断定する。
 - 頼まれていない export。
 - セットアップで2問以外を長々と聞く。
 
@@ -209,3 +217,5 @@ Excel 側のメモを YAML に戻す機能は持たない。正は YAML。
 
 - [references/tool-setup.md](references/tool-setup.md)
 - [references/must-gather-map.md](references/must-gather-map.md)
+- [references/kt-analysis.md](references/kt-analysis.md)
+- [references/timeline.md](references/timeline.md)
