@@ -2,7 +2,7 @@
 """Seed or refresh tsr-investigation.yaml from the TSR PDF.
 
 PDF-derived fields are updated. Investigation fields (status, evidence,
-user_notes, ...) are preserved when a finding id already exists.
+user_notes, decision_brief, ...) are preserved when a finding id already exists.
 
   python3 seed.py
   python3 seed.py --root /path/to/project
