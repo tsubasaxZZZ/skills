@@ -4,7 +4,7 @@ Cursor Agent skills.
 
 ## tsr-investigator
 
-Investigate a Red Hat **Technical Supportability Review with AI** (TSRwithAI) PDF against an extracted OpenShift must-gather. Companion workflow: one finding at a time, confirm against primary data, optional export to xlsx/csv/md.
+Investigate a Red Hat **Technical Supportability Review with AI** (TSRwithAI) PDF against an extracted OpenShift must-gather. Companion **review** of existing TSR findings: one finding at a time, confirm against primary data, optional export. Not incident response.
 
 The agent-facing `SKILL.md` is currently in Japanese. Python scripts are English.
 
