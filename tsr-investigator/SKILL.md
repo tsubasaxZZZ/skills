@@ -26,6 +26,7 @@ TSR with AI レポートの所見を、ユーザーと一緒に一件ずつ調�
 | `tsr-inventory.yaml` | must-gather のカタログ（プラグイン、namespace、API グループ、ログ有無）。所見は触らない |
 | `references/kt-analysis.md` | 一件の切り分け（IS / IS-NOT）。検証の前に完成表を要求しない |
 | `references/timeline.md` | 時系列の再構成。常用しない。WHEN 不足や前後関係のときだけ提案 |
+| `references/decision-materials.md` | 事実判定のあと、対応要否の材料を揃える。要否自体は決めない |
 | `scripts/export.py` | オプション。ユーザーが指示したときだけ xlsx/csv/md を出す |
 
 スクリプトは `$SKILL/scripts/`。作業ディレクトリは調査対象のプロジェクトルート。
@@ -55,7 +56,8 @@ TSR レポートは AI が生成した二次情報であり、根拠が must-gat
 - **TOC セクション名を固定リストにしない**。見出しはレポートごとに増減・改名される。一覧は毎回 PDF（seed 結果）から取る。
 - **must-gather のプラグイン kind を固定集合にしない**。inventory の `plugins` が正。unknown は無視せず dirname で扱う。
 - **export はオプション**。ユーザーが「Excel に出して」「CSV で」などと言ったときだけ `export.py` を使う。初回セットアップや一件終了のたびに勝手に出さない。
-- 新規インストールは合意してから。止まるべきは調査方針の決定と、初回セットアップの2問。
+- **対応要否をエージェントが決めない。** 材料を揃える。判断はユーザー。
+- 新規インストールは合意してから。止まるべきは調査方針の決定、初回セットアップの2問、判断材料に初めて入るときの環境4問、対応要否（ユーザー）。
 
 ## セッションの流れ
 
@@ -129,9 +131,10 @@ YAML を読み、**この PDF から発見したセクションごと**に Prior
 2. **切り分けと検証方針** — `references/kt-analysis.md`。IS は inventory と、その所見に既にある `evidence` だけ。空の IS-NOT は次に合意するコマンド。レポートの原因は並列の一候補であり、筆頭に置かない。コマンドを出す前に、候補ごとに「手元の must-gather で棄却できるか」を判定する。棄却不能は `next_actions` に切り出し、深追いしない。痕跡がどのプラグインに残るはずかを示し、合意を取る。
 3. **検証** — 合意したコマンドだけ実行する。空出力も情報。
 4. **判定** — 4値のいずれか。根拠パスを添える。原因仮説の棄却と、所見そのものの反証を混ぜない。
-5. **必要なら外部調査** — 「外部調査の作法」。
-6. **記録** — `tsr-investigation.yaml` のその `id` だけ更新する（一次ソース）。IS/IS-NOT 表や年表は YAML に埋め込まない。
-7. **次の提案** — 1〜3件挙げて選ばせる。WHEN が空のまま、または前後関係・引き金を見たいときは、時系列の再構成を提案してよい。毎回ではない。手順は `references/timeline.md`。
+5. **必要なら外部調査** — 「外部調査の作法」。対応コストを書く材料になる。
+6. **判断材料** — `references/decision-materials.md`。影響範囲・放置時・対応コスト・依存・判断が変わる条件・未確認を揃える。対応要否は書かない。`meta.environment` が無ければ、この段階に初めて入ったとき一度だけ4問聞く（セットアップの2問とは別）。一件分は `decision_brief` に書く。`user_decision` は空欄。PDF の `impact` は上書きしない。
+7. **記録** — `tsr-investigation.yaml` のその `id` だけ更新する（一次ソース）。IS/IS-NOT 表や年表は YAML に埋め込まない。
+8. **次の提案** — 1〜3件挙げて選ばせる。WHEN が空のまま、または前後関係・引き金を見たいときは、時系列の再構成を提案してよい。毎回ではない。手順は `references/timeline.md`。
 
 検証手順書は持たない。このプロジェクトの地図は `tsr-inventory.yaml`。一般的な歩き方は `references/must-gather-map.md`。
 
@@ -155,7 +158,7 @@ config の `tools.omc` が `skip` なら `omc` を提案しない。
 - 専門用語は初出で一行補足（fsync、compaction、Raft、QoS、systemReserved、SCC、CSV）。
 - 因果の連鎖で説明する。
 - 数字には基準値との比較を付ける。
-- 「放置するとどうなるか」を具体的に。1所見あたり数百字。
+- 「放置するとどうなるか」を具体的に。1所見あたり数百字。詳しい放置時の条件と対応コストは、事実判定のあとの判断材料で書く。
 
 ## 外部調査の作法
 
@@ -167,9 +170,10 @@ config の `tools.omc` が `skip` なら `omc` を提案しない。
 
 ## 一次ソース（YAML）
 
-`user_notes` はユーザー専用。エージェントは既存値を消さない。
+`user_notes` と `decision_brief.user_decision` はユーザー専用。エージェントは既存値を消さない。`user_decision` はユーザーが決めるまで空欄。
 
-一件更新時に触ってよいフィールド: `status`, `evidence`, `interpretation`, `refs`, `next_actions`, `investigated_on`。
+一件更新時に触ってよいフィールド: `status`, `evidence`, `interpretation`, `refs`, `next_actions`, `investigated_on`, `decision_brief`（`user_decision` 以外）。
+`meta.environment` は判断材料に初めて入ったときに一度書く。再 seed しても残す。
 
 IS / IS-NOT の表と年表は一次ソースにしない。結論だけ上記フィールドに書く。作業ファイルが必要ならプロジェクトの `.tsr-work/`。
 
@@ -210,8 +214,10 @@ Excel 側のメモを YAML に戻す機能は持たない。正は YAML。
 - レポートが挙げた原因を候補の筆頭に置く。
 - 全所見の IS/IS-NOT や年表を自動で埋める。
 - 時間的な近接だけで因果を断定する。
+- 対応要否をエージェントが決める。「対応を推奨します」も使わない。
+- 環境の性質を推定する。
 - 頼まれていない export。
-- セットアップで2問以外を長々と聞く。
+- セットアップで2問以外を長々と聞く。環境の4問は判断材料に入ったとき一度だけ。
 
 ## 参照
 
@@ -219,3 +225,4 @@ Excel 側のメモを YAML に戻す機能は持たない。正は YAML。
 - [references/must-gather-map.md](references/must-gather-map.md)
 - [references/kt-analysis.md](references/kt-analysis.md)
 - [references/timeline.md](references/timeline.md)
+- [references/decision-materials.md](references/decision-materials.md)

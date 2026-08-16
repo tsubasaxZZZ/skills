@@ -52,7 +52,32 @@ INVESTIGATION_FIELDS = (
     "next_actions",
     "investigated_on",
     "user_notes",
+    "decision_brief",
 )
+
+
+def empty_decision_brief() -> dict:
+    return {
+        "scope": "",
+        "if_ignored": "",
+        "remediation_cost": "",
+        "depends_on": [],
+        "relieves": [],
+        "decision_changes_if": "",
+        "unconfirmed": "",
+        "user_decision": "",
+    }
+
+
+def merge_decision_brief(prev: object) -> dict:
+    out = empty_decision_brief()
+    if not isinstance(prev, dict):
+        return out
+    for key in out:
+        if key in prev and prev[key] is not None:
+            out[key] = prev[key]
+    return out
+
 
 SKILL_SCRIPTS = Path(__file__).resolve().parent
 
@@ -560,6 +585,7 @@ def empty_investigation_fields() -> dict:
         "next_actions": [],
         "investigated_on": None,
         "user_notes": "",
+        "decision_brief": empty_decision_brief(),
     }
 
 
@@ -599,15 +625,20 @@ def seed_investigation(pdf: Path, dest: Path, *, must_gather: str | None = None)
         prev = old_by_id.get(rec["id"])
         if prev:
             for field in INVESTIGATION_FIELDS:
-                if field in prev:
+                if field == "decision_brief":
+                    rec[field] = merge_decision_brief(prev.get("decision_brief"))
+                elif field in prev:
                     rec[field] = prev[field]
         findings.append(rec)
     meta = dict(parsed["meta"])
     meta["pdf"] = str(pdf)
+    old_meta = existing.get("meta") or {}
     if must_gather:
         meta["must_gather_root"] = must_gather
-    elif existing.get("meta", {}).get("must_gather_root"):
-        meta["must_gather_root"] = existing["meta"]["must_gather_root"]
+    elif old_meta.get("must_gather_root"):
+        meta["must_gather_root"] = old_meta["must_gather_root"]
+    if old_meta.get("environment"):
+        meta["environment"] = old_meta["environment"]
     data = {
         "schema_version": 1,
         "meta": meta,

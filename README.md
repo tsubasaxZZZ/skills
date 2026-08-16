@@ -26,6 +26,7 @@ tsr-investigator/
   references/must-gather-map.md
   references/kt-analysis.md   # IS / IS-NOT (per finding)
   references/timeline.md      # optional timeline reconstruction
+  references/decision-materials.md  # decision brief after fact judgment
   scripts/setup.py
   scripts/seed.py         # PDF → YAML (deterministic, no LLM)
   scripts/inventory.py    # must-gather → tsr-inventory.yaml (catalog only)
