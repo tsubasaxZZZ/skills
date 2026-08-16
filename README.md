@@ -8,6 +8,8 @@ Investigate a Red Hat **Technical Supportability Review with AI** (TSRwithAI) PD
 
 The agent-facing `SKILL.md` is currently in Japanese. Python scripts are English.
 
+On first use the skill briefs the human (what it does, how to talk to it, example phrases), then sets `briefing_done` in `tsr-config.yaml`. It does not start findings until that briefing is done.
+
 Do **not** commit customer PDFs, must-gather trees, `tsr-config.yaml`, `tsr-investigation.yaml`, or `tsr-inventory.yaml`. Those stay in the investigation project.
 
 ### Install

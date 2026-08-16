@@ -146,6 +146,19 @@ def load_config(root: Path) -> dict | None:
         return yaml.safe_load(fh) or {}
 
 
+def is_briefing_done(cfg: dict | None) -> bool:
+    return bool(cfg and cfg.get("briefing_done"))
+
+
+def mark_briefing_done(root: Path) -> dict:
+    existing = load_config(root)
+    if not existing:
+        raise SystemExit("tsr-config.yaml not found. Run setup.py write after the briefing and setup questions.")
+    existing["briefing_done"] = True
+    dump_yaml(existing, config_path(root))
+    return existing
+
+
 def dump_yaml(data: dict, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8") as fh:
@@ -165,15 +178,21 @@ def write_config(
     export_format: str,
     yq: str = "skip",
     after_each_finding: bool = False,
+    briefing_done: bool = True,
 ) -> dict:
     if omc not in {"use", "skip"}:
         raise ValueError("omc must be use or skip")
     if export_format not in {"xlsx", "csv", "md", "none"}:
         raise ValueError("export format must be xlsx, csv, md, or none")
+    existing = load_config(root) or {}
     paths = default_paths(root)
+    for key, val in (existing.get("paths") or {}).items():
+        if val:
+            paths[key] = val
     cfg = {
         "schema_version": 1,
         "platform": detect_platform(),
+        "briefing_done": briefing_done,
         "paths": paths,
         "tools": {
             "omc": omc,
@@ -273,6 +292,7 @@ def detect_payload(root: Path) -> dict:
         "platform": detect_platform(),
         "config_exists": config_path(root).exists(),
         "config_path": str(config_path(root)),
+        "briefing_done": is_briefing_done(load_config(root)),
         "paths": default_paths(root),
         "tools_on_path": {k: v is not None for k, v in tools.items()},
         "tool_paths": tools,

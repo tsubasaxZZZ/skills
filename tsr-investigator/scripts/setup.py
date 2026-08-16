@@ -3,6 +3,7 @@
 
   python3 setup.py detect
   python3 setup.py write --omc skip --export-format xlsx
+  python3 setup.py briefing-done
   python3 setup.py ensure-xlsx
   python3 setup.py write --omc use --export-format csv --root /path/to/project
 """
@@ -16,7 +17,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from lib import detect_payload, ensure_xlsx_env, project_root, write_config
+from lib import detect_payload, ensure_xlsx_env, mark_briefing_done, project_root, write_config
 
 
 def main() -> int:
@@ -31,6 +32,11 @@ def main() -> int:
         help="Create project .venv and install openpyxl (uv if available, else venv). Never pip --user.",
     )
 
+    sub.add_parser(
+        "briefing-done",
+        help="Set briefing_done on an existing tsr-config.yaml after the first-session briefing",
+    )
+
     w = sub.add_parser("write", help="Write tsr-config.yaml from answered setup questions")
     w.add_argument("--omc", required=True, choices=("use", "skip"))
     w.add_argument("--export-format", required=True, choices=("xlsx", "csv", "md", "none"))
@@ -39,6 +45,11 @@ def main() -> int:
         "--after-each-finding",
         action="store_true",
         help="Also export after every finding (default: on request only)",
+    )
+    w.add_argument(
+        "--no-briefing-done",
+        action="store_true",
+        help="Write config without setting briefing_done (default: set it)",
     )
 
     args = parser.parse_args()
@@ -56,12 +67,20 @@ def main() -> int:
         sys.stdout.write("\n")
         return 0
 
+    if args.cmd == "briefing-done":
+        cfg = mark_briefing_done(root)
+        print(f"briefing_done on {root / 'tsr-config.yaml'}", file=sys.stderr)
+        json.dump(cfg, sys.stdout, indent=2, ensure_ascii=False)
+        sys.stdout.write("\n")
+        return 0
+
     cfg = write_config(
         root,
         omc=args.omc,
         export_format=args.export_format,
         yq=args.yq,
         after_each_finding=args.after_each_finding,
+        briefing_done=not args.no_briefing_done,
     )
     path = root / "tsr-config.yaml"
     print(f"wrote {path}", file=sys.stderr)
