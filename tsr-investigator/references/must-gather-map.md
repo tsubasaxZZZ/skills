@@ -5,6 +5,9 @@
 
 パスの正は `tsr-config.yaml` の `paths.must_gather`。無ければプロジェクト内の `must-gather.local.*` を `ls` で確認する。
 
+初回に `scripts/inventory.py` が `tsr-inventory.yaml` を書く。プラグイン、namespace、cluster-scoped のディレクトリ名、pod ログの有無（件数のみ）、`metrics/` のトップレベルをカタログする。
+所見の調査に入る前にこのファイルを見る。毎回ツリーを `ls` し直さない。カタログは地図であり、所見の判定ではない。
+
 ## このディレクトリの起点
 
 ```bash

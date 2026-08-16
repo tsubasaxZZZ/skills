@@ -8,7 +8,7 @@ Investigate a Red Hat **Technical Supportability Review with AI** (TSRwithAI) PD
 
 The agent-facing `SKILL.md` is currently in Japanese. Python scripts are English.
 
-Do **not** commit customer PDFs, must-gather trees, `tsr-config.yaml`, or `tsr-investigation.yaml`. Those stay in the investigation project.
+Do **not** commit customer PDFs, must-gather trees, `tsr-config.yaml`, `tsr-investigation.yaml`, or `tsr-inventory.yaml`. Those stay in the investigation project.
 
 ### Install
 
@@ -25,7 +25,9 @@ tsr-investigator/
   references/tool-setup.md
   references/must-gather-map.md
   scripts/setup.py
-  scripts/seed.py      # PDF → YAML (deterministic, no LLM)
-  scripts/export.py    # YAML → xlsx/csv/md (optional, on request)
+  scripts/seed.py         # PDF → YAML (deterministic, no LLM)
+  scripts/inventory.py    # must-gather → tsr-inventory.yaml (catalog only)
+  scripts/mg_inventory.py
+  scripts/export.py       # YAML → xlsx/csv/md (optional, on request)
   scripts/lib.py
 ```

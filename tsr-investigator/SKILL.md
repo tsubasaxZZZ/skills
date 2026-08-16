@@ -23,6 +23,7 @@ TSR with AI レポートの所見を、ユーザーと一緒に一件ずつ調�
 |----------|------|
 | `tsr-config.yaml` | プロジェクト設定（omc を使うか、export 形式）。スキルはこれを読む |
 | `tsr-investigation.yaml` | **一次ソース**。全所見と調査結果 |
+| `tsr-inventory.yaml` | must-gather のカタログ（プラグイン、namespace、API グループ、ログ有無）。所見は触らない |
 | `scripts/export.py` | オプション。ユーザーが指示したときだけ xlsx/csv/md を出す |
 
 スクリプトは `$SKILL/scripts/`。作業ディレクトリは調査対象のプロジェクトルート。
@@ -32,6 +33,7 @@ SCRIPTS=$SKILL/scripts
 python3 $SCRIPTS/setup.py detect
 python3 $SCRIPTS/setup.py write --omc skip --export-format xlsx
 python3 $SCRIPTS/seed.py
+python3 $SCRIPTS/inventory.py
 python3 $SCRIPTS/export.py xlsx    # ユーザーが頼んだときだけ
 ```
 
@@ -80,6 +82,10 @@ config が既にあればセットアップは飛ばし、その内容に従う�
 `tsr-investigation.yaml` が無ければ（または PDF を取り直す指示があれば）`seed.py` を実行する。
 全所見が `status: not_started` で入る。再 seed しても `status` / `evidence` / `user_notes` などは残る。
 
+続けて `inventory.py` を実行し、must-gather のカタログを `tsr-inventory.yaml` に書く。
+所見の `status` は触らない。Data Quality Notice の文言があればコピーするだけで、欠落 gather との突き合わせはしない。
+以降の調査では、毎回 `ls` し直す前にこのカタログを見る。
+
 YAML を読み、**この PDF から発見したセクションごと**に Priority/Severity 付きの表を出す。必ず添える:
 
 - Data Quality Notice に書かれた欠落データソース（その PDF の文言を使う。スキルに欠落一覧を焼かない）
@@ -121,7 +127,7 @@ YAML を読み、**この PDF から発見したセクションごと**に Prior
 6. **記録** — `tsr-investigation.yaml` のその `id` だけ更新する（一次ソース）。
 7. **次の提案** — 1〜3件挙げて選ばせる。
 
-検証手順書は持たない。地図は `references/must-gather-map.md`。
+検証手順書は持たない。このプロジェクトの地図は `tsr-inventory.yaml`。一般的な歩き方は `references/must-gather-map.md`。
 
 config の `tools.omc` が `skip` なら `omc` を提案しない。
 
@@ -136,7 +142,7 @@ config の `tools.omc` が `skip` なら `omc` を提案しない。
 | （着手中） | `in_progress` |
 | （未着手） | `not_started` |
 
-「無い」と言う前に `$OCP` と `$PG` の両方を探す。
+「無い」と言う前に `tsr-inventory.yaml` の `namespace_index` と、Default / PG 両方のプラグインを見る。
 
 ## 解説の作法
 
@@ -184,6 +190,7 @@ Excel 側のメモを YAML に戻す機能は持たない。正は YAML。
 ## やってはいけないこと
 
 - 全所見の自動処理。
+- inventory から所見を自動判定する。カタログは地図であり、判定ではない。
 - 方針提示なしでコマンドを大量実行。
 - must-gather を見ずに対応方法を語る。
 - 稼働中クラスタへの変更。修正は Runbook にして実行はユーザー。

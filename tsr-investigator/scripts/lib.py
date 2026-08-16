@@ -108,6 +108,7 @@ def default_paths(root: Path) -> dict:
         "must_gather": mg,
         "pdf": pdf,
         "investigation": str(root / "tsr-investigation.yaml"),
+        "inventory": str(root / "tsr-inventory.yaml"),
         "export_dir": str(root),
     }
 
