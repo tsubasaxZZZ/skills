@@ -10,6 +10,10 @@
 
 `kind` はよくあるイメージ名へのラベルであり、許可リストではない。unknown や `skipped_top_level` は落とさず、dirname で扱う。
 
+ネストした `*/namespaces`（inspect ツリーなど）は `extra_namespace_trees` に残す。namespace 名と `current.log` 件数はトップレベル `namespaces/` とマージし、`namespace_index` にも載せる。パスの内訳は `namespaces_by_tree`。
+
+`--must-gather` は `must-gather.local.*`（中に `quay-io-*` が並ぶ）でも、gather イメージディレクトリそのもの（直下に `namespaces/` などがある）でもよい。
+
 ## このディレクトリの起点
 
 パスは inventory の `plugins[].path` / `dirname` が正。次の glob は Default / PG の例にすぎない。名前が違う、または kind が unknown なら glob を信じない。

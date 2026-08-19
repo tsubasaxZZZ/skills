@@ -92,26 +92,56 @@ def _pod_log_counts(namespaces_dir: Path) -> dict[str, int]:
     return counts
 
 
-def _scan_plugin(plugin: Path) -> dict:
-    namespaces_dir = plugin / "namespaces"
-    cluster_dir = plugin / "cluster-scoped-resources"
-    metrics_dir = plugin / "metrics"
-    nodes_dir = plugin / "nodes"
-    extra_trees: list[str] = []
+def _namespace_trees(plugin: Path) -> list[tuple[str, Path]]:
+    """Top-level namespaces/ plus one-level nested inspect trees (child/namespaces)."""
+    trees: list[tuple[str, Path]] = []
+    if not plugin.is_dir():
+        return trees
+    top = plugin / "namespaces"
+    if top.is_dir():
+        trees.append(("namespaces", top))
     for child in sorted(plugin.iterdir()):
         if not child.is_dir() or child.name == "namespaces":
             continue
         nested = child / "namespaces"
         if nested.is_dir():
-            extra_trees.append(f"{child.name}/namespaces")
+            trees.append((f"{child.name}/namespaces", nested))
+    return trees
 
-    log_counts = _pod_log_counts(namespaces_dir)
+
+def _union_namespace_names(trees: list[tuple[str, Path]]) -> list[str]:
+    seen: set[str] = set()
+    names: list[str] = []
+    for _, ns_dir in trees:
+        for name in _child_dirs(ns_dir):
+            if name not in seen:
+                seen.add(name)
+                names.append(name)
+    names.sort()
+    return names
+
+
+def _merged_pod_log_counts(trees: list[tuple[str, Path]]) -> dict[str, int]:
+    merged: dict[str, int] = {}
+    for _, ns_dir in trees:
+        for ns, n in _pod_log_counts(ns_dir).items():
+            merged[ns] = merged.get(ns, 0) + n
+    return merged
+
+
+def _scan_plugin(plugin: Path) -> dict:
+    cluster_dir = plugin / "cluster-scoped-resources"
+    metrics_dir = plugin / "metrics"
+    nodes_dir = plugin / "nodes"
+    ns_trees = _namespace_trees(plugin)
+    extra_trees = [rel for rel, _ in ns_trees if rel != "namespaces"]
+    log_counts = _merged_pod_log_counts(ns_trees)
     record: dict = {
         "dirname": plugin.name,
         "kind": classify_plugin(plugin.name),
         "path": str(plugin.resolve()),
         "top_level": _child_dirs(plugin),
-        "namespaces": _child_dirs(namespaces_dir),
+        "namespaces": _union_namespace_names(ns_trees),
         "cluster_scoped": _child_dirs(cluster_dir),
         "pod_logs": {
             "total_current_log_files": sum(log_counts.values()),
@@ -120,6 +150,9 @@ def _scan_plugin(plugin: Path) -> dict:
     }
     if extra_trees:
         record["extra_namespace_trees"] = extra_trees
+        record["namespaces_by_tree"] = {
+            rel: _child_dirs(path) for rel, path in ns_trees
+        }
     if metrics_dir.is_dir():
         record["metrics_dirs"] = _child_dirs(metrics_dir)
     if nodes_dir.is_dir():
@@ -134,10 +167,21 @@ def discover_plugins(must_gather: Path) -> list[Path]:
     if not must_gather.is_dir():
         raise FileNotFoundError(f"must-gather not found: {must_gather}")
     plugins = [p for p in sorted(must_gather.iterdir()) if _is_plugin_dir(p)]
-    return plugins
+    if plugins:
+        return plugins
+    # --must-gather may be the gather image dir itself (quay-io-* with
+    # namespaces/ inside), not the wrapper that holds child plugins.
+    # Require gather content so an empty must-gather.local.* wrapper is
+    # not cataloged just because its name matches PLUGIN_NAME_HINTS.
+    if any((must_gather / d).is_dir() for d in PLUGIN_CONTENT_DIRS):
+        return [must_gather]
+    return []
 
 
 def _skipped_top_level_dirs(must_gather: Path, plugins: list[Path]) -> list[str]:
+    root = must_gather.resolve()
+    if any(p.resolve() == root for p in plugins):
+        return []
     plugin_names = {p.name for p in plugins}
     skipped: list[str] = []
     for child in sorted(must_gather.iterdir()):
@@ -204,6 +248,9 @@ def inventory_summary_lines(data: dict) -> list[str]:
         n_ns = len(plugin.get("namespaces") or [])
         n_logs = (plugin.get("pod_logs") or {}).get("total_current_log_files") or 0
         extra = f"{n_ns} namespaces, {n_logs} current.log"
+        extra_trees = plugin.get("extra_namespace_trees")
+        if extra_trees:
+            extra += f", extra trees: {', '.join(extra_trees)}"
         metrics = plugin.get("metrics_dirs")
         if metrics:
             extra += f", metrics: {', '.join(metrics)}"
