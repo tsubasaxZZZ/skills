@@ -39,6 +39,14 @@ COLUMNS = [
     ("next_actions", "Next actions"),
     ("investigated_on", "Investigated on"),
     ("user_notes", "User notes"),
+    ("decision_brief.scope", "Scope"),
+    ("decision_brief.if_ignored", "If ignored"),
+    ("decision_brief.remediation_cost", "Remediation cost"),
+    ("decision_brief.depends_on", "Depends on"),
+    ("decision_brief.relieves", "Relieves"),
+    ("decision_brief.decision_changes_if", "Decision changes if"),
+    ("decision_brief.unconfirmed", "Unconfirmed"),
+    ("decision_brief.user_decision", "Decision"),
 ]
 
 
@@ -51,15 +59,20 @@ def _status_label(value: str | None) -> str:
 def _cell(finding: dict, key: str) -> str:
     if key == "status":
         return _status_label(finding.get("status"))
-    if key == "next_actions":
-        acts = finding.get("next_actions") or []
-        if isinstance(acts, list):
-            return "; ".join(str(a) for a in acts)
-        return str(acts)
-    val = finding.get(key)
-    if val is None:
+    cur: object = finding
+    for part in key.split("."):
+        if not isinstance(cur, dict):
+            return ""
+        cur = cur.get(part)
+    if key == "next_actions" or key.endswith("depends_on") or key.endswith("relieves"):
+        if isinstance(cur, list):
+            return "; ".join(str(a) for a in cur)
+        if cur is None:
+            return ""
+        return str(cur)
+    if cur is None:
         return ""
-    return str(val)
+    return str(cur)
 
 
 def rows_from(data: dict) -> list[dict]:
@@ -93,6 +106,44 @@ def export_md(data: dict, dest: Path) -> None:
         title = (f.get("title") or "").replace("|", "/")
         lines.append(
             f"| {f.get('id')} | {f.get('priority')} | {_status_label(f.get('status'))} | {title} |"
+        )
+    env = meta.get("environment") or {}
+    if env:
+        lines.extend(
+            [
+                "",
+                "## Environment",
+                "",
+                f"- Role: {env.get('role') or ''}",
+                f"- Workload impact: {env.get('workload_impact') or ''}",
+                f"- Ops: {env.get('ops') or ''}",
+                f"- Upcoming changes: {env.get('upcoming_changes') or ''}",
+            ]
+        )
+    lines.extend(
+        [
+            "",
+            "## Decision brief",
+            "",
+            "| Finding | Status | Scope | Remediation cost | Depends on | Decision | Decision changes if |",
+            "|---------|--------|-------|------------------|------------|----------|---------------------|",
+        ]
+    )
+    for f in findings:
+        lines.append(
+            "| "
+            + " | ".join(
+                [
+                    str(f.get("id") or ""),
+                    _status_label(f.get("status")),
+                    _cell(f, "decision_brief.scope").replace("|", "/"),
+                    _cell(f, "decision_brief.remediation_cost").replace("|", "/"),
+                    _cell(f, "decision_brief.depends_on").replace("|", "/"),
+                    _cell(f, "decision_brief.user_decision").replace("|", "/"),
+                    _cell(f, "decision_brief.decision_changes_if").replace("|", "/"),
+                ]
+            )
+            + " |"
         )
     dest.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
@@ -136,7 +187,7 @@ def export_xlsx(data: dict, dest: Path) -> None:
     for cell in ws[1]:
         cell.fill = header_fill
         cell.font = header_font
-    widths = [28, 32, 8, 56, 12, 10, 16, 60, 40, 32, 14, 32]
+    widths = [28, 32, 8, 56, 12, 10, 16, 60, 40, 32, 14, 32, 40, 40, 40, 24, 24, 40, 32, 20]
     for i, width in enumerate(widths, start=1):
         ws.column_dimensions[get_column_letter(i)].width = width
 
@@ -149,6 +200,14 @@ def export_xlsx(data: dict, dest: Path) -> None:
     summary.append(["Data collected", meta.get("data_collected") or ""])
     summary.append(["Must-gather", meta.get("must_gather_label") or ""])
     summary.append(["Data Quality Notice", meta.get("data_quality_notice") or ""])
+    env = meta.get("environment") or {}
+    if env:
+        summary.append([])
+        summary.append(["Environment", ""])
+        summary.append(["Role", env.get("role") or ""])
+        summary.append(["Workload impact", env.get("workload_impact") or ""])
+        summary.append(["Ops", env.get("ops") or ""])
+        summary.append(["Upcoming changes", env.get("upcoming_changes") or ""])
     summary.append([])
     summary.append(["Priority", "Count"])
     pri_counts: dict[str, int] = {}

@@ -4,6 +4,7 @@ __pycache__/
 .tsr-work/
 tsr-config.yaml
 tsr-investigation.yaml
+tsr-inventory.yaml
 tsr-investigation.xlsx
 tsr-investigation.csv
 tsr-investigation.md

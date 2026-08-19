@@ -52,7 +52,32 @@ INVESTIGATION_FIELDS = (
     "next_actions",
     "investigated_on",
     "user_notes",
+    "decision_brief",
 )
+
+
+def empty_decision_brief() -> dict:
+    return {
+        "scope": "",
+        "if_ignored": "",
+        "remediation_cost": "",
+        "depends_on": [],
+        "relieves": [],
+        "decision_changes_if": "",
+        "unconfirmed": "",
+        "user_decision": "",
+    }
+
+
+def merge_decision_brief(prev: object) -> dict:
+    out = empty_decision_brief()
+    if not isinstance(prev, dict):
+        return out
+    for key in out:
+        if key in prev and prev[key] is not None:
+            out[key] = prev[key]
+    return out
+
 
 SKILL_SCRIPTS = Path(__file__).resolve().parent
 
@@ -108,6 +133,7 @@ def default_paths(root: Path) -> dict:
         "must_gather": mg,
         "pdf": pdf,
         "investigation": str(root / "tsr-investigation.yaml"),
+        "inventory": str(root / "tsr-inventory.yaml"),
         "export_dir": str(root),
     }
 
@@ -118,6 +144,19 @@ def load_config(root: Path) -> dict | None:
         return None
     with path.open(encoding="utf-8") as fh:
         return yaml.safe_load(fh) or {}
+
+
+def is_briefing_done(cfg: dict | None) -> bool:
+    return bool(cfg and cfg.get("briefing_done"))
+
+
+def mark_briefing_done(root: Path) -> dict:
+    existing = load_config(root)
+    if not existing:
+        raise SystemExit("tsr-config.yaml not found. Run setup.py write after the briefing and setup questions.")
+    existing["briefing_done"] = True
+    dump_yaml(existing, config_path(root))
+    return existing
 
 
 def dump_yaml(data: dict, path: Path) -> None:
@@ -139,15 +178,21 @@ def write_config(
     export_format: str,
     yq: str = "skip",
     after_each_finding: bool = False,
+    briefing_done: bool = True,
 ) -> dict:
     if omc not in {"use", "skip"}:
         raise ValueError("omc must be use or skip")
     if export_format not in {"xlsx", "csv", "md", "none"}:
         raise ValueError("export format must be xlsx, csv, md, or none")
+    existing = load_config(root) or {}
     paths = default_paths(root)
+    for key, val in (existing.get("paths") or {}).items():
+        if val:
+            paths[key] = val
     cfg = {
         "schema_version": 1,
         "platform": detect_platform(),
+        "briefing_done": briefing_done,
         "paths": paths,
         "tools": {
             "omc": omc,
@@ -247,6 +292,7 @@ def detect_payload(root: Path) -> dict:
         "platform": detect_platform(),
         "config_exists": config_path(root).exists(),
         "config_path": str(config_path(root)),
+        "briefing_done": is_briefing_done(load_config(root)),
         "paths": default_paths(root),
         "tools_on_path": {k: v is not None for k, v in tools.items()},
         "tool_paths": tools,
@@ -559,6 +605,7 @@ def empty_investigation_fields() -> dict:
         "next_actions": [],
         "investigated_on": None,
         "user_notes": "",
+        "decision_brief": empty_decision_brief(),
     }
 
 
@@ -598,15 +645,20 @@ def seed_investigation(pdf: Path, dest: Path, *, must_gather: str | None = None)
         prev = old_by_id.get(rec["id"])
         if prev:
             for field in INVESTIGATION_FIELDS:
-                if field in prev:
+                if field == "decision_brief":
+                    rec[field] = merge_decision_brief(prev.get("decision_brief"))
+                elif field in prev:
                     rec[field] = prev[field]
         findings.append(rec)
     meta = dict(parsed["meta"])
     meta["pdf"] = str(pdf)
+    old_meta = existing.get("meta") or {}
     if must_gather:
         meta["must_gather_root"] = must_gather
-    elif existing.get("meta", {}).get("must_gather_root"):
-        meta["must_gather_root"] = existing["meta"]["must_gather_root"]
+    elif old_meta.get("must_gather_root"):
+        meta["must_gather_root"] = old_meta["must_gather_root"]
+    if old_meta.get("environment"):
+        meta["environment"] = old_meta["environment"]
     data = {
         "schema_version": 1,
         "meta": meta,

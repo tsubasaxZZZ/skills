@@ -1,7 +1,7 @@
 # 解析ツールの準備
 
 スキルはプロジェクトルートの `tsr-config.yaml` を読む。
-このファイルが無ければ、まず `setup.py detect` のあと初回2問（omc / export 形式）を行い `setup.py write` する。
+`briefing_done` が無ければ、調査の前に使い方を説明する。そのあと、ファイルが無ければ `setup.py detect` と初回2問（omc / export 形式）を行い `setup.py write` する。config だけあってフラグが無いときは `setup.py briefing-done`。
 
 config があるセッションでは、ここに書いた「毎回確認」は `tools.*` に従う。
 `omc: skip` なら omc のインストールも `omc use` も提案しない。
@@ -63,6 +63,8 @@ PG の `$PG/metrics/*.json` は omc 対象外。jq で読む。
 所見の切り出しは `seed.py`（pdftotext、`-layout` なし）。人が表を見るときだけ `pdftotext -layout` を別ファイルに出してよい。
 
 一次ソースは `paths.investigation`（既定 `tsr-investigation.yaml`）。Markdown ログは使わない。
+must-gather のカタログは `paths.inventory`（既定 `tsr-inventory.yaml`）。`seed.py` のあと `inventory.py` を一度走らせる。
+IS/IS-NOT 表や年表は YAML に埋め込まない。判断材料は `decision_brief`（`user_decision` はユーザーが埋める）。作業ファイルは `.tsr-work/`。
 
 ## export
 
