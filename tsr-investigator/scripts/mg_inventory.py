@@ -46,13 +46,22 @@ def classify_plugin(dirname: str) -> str:
     return "unknown"
 
 
+def _has_gather_content(path: Path) -> bool:
+    return any((path / d).is_dir() for d in PLUGIN_CONTENT_DIRS)
+
+
+def _is_inspect_tree(path: Path) -> bool:
+    """oc adm inspect output (inspect.local.<timestamp>), not a gather plugin."""
+    return path.name.lower().startswith("inspect.")
+
+
 def _is_plugin_dir(path: Path) -> bool:
-    if not path.is_dir():
+    if not path.is_dir() or _is_inspect_tree(path):
         return False
     name = path.name.lower()
     if any(hint in name for hint in PLUGIN_NAME_HINTS):
         return True
-    return any((path / d).is_dir() for d in PLUGIN_CONTENT_DIRS)
+    return _has_gather_content(path)
 
 
 def _child_dirs(path: Path) -> list[str]:
@@ -166,16 +175,13 @@ def _scan_plugin(plugin: Path) -> dict:
 def discover_plugins(must_gather: Path) -> list[Path]:
     if not must_gather.is_dir():
         raise FileNotFoundError(f"must-gather not found: {must_gather}")
-    plugins = [p for p in sorted(must_gather.iterdir()) if _is_plugin_dir(p)]
-    if plugins:
-        return plugins
-    # --must-gather may be the gather image dir itself (quay-io-* with
-    # namespaces/ inside), not the wrapper that holds child plugins.
-    # Require gather content so an empty must-gather.local.* wrapper is
-    # not cataloged just because its name matches PLUGIN_NAME_HINTS.
-    if any((must_gather / d).is_dir() for d in PLUGIN_CONTENT_DIRS):
+    # If this path already holds gather content, it is the plugin. Nested
+    # inspect.local.*/namespaces also match via namespaces/, so scanning
+    # children first would catalog the inspect dir (wrong dirname/kind,
+    # missing top-level namespaces/ and cluster-scoped-resources).
+    if _has_gather_content(must_gather):
         return [must_gather]
-    return []
+    return [p for p in sorted(must_gather.iterdir()) if _is_plugin_dir(p)]
 
 
 def _skipped_top_level_dirs(must_gather: Path, plugins: list[Path]) -> list[str]:

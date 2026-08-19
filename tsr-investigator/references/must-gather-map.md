@@ -12,7 +12,7 @@
 
 ネストした `*/namespaces`（inspect ツリーなど）は `extra_namespace_trees` に残す。namespace 名と `current.log` 件数はトップレベル `namespaces/` とマージし、`namespace_index` にも載せる。パスの内訳は `namespaces_by_tree`。
 
-`--must-gather` は `must-gather.local.*`（中に `quay-io-*` が並ぶ）でも、gather イメージディレクトリそのもの（直下に `namespaces/` などがある）でもよい。
+`--must-gather` は `must-gather.local.*`（中に `quay-io-*` が並ぶ）でも、gather イメージディレクトリそのもの（直下に `namespaces/` などがある）でもよい。後者のとき `inspect.local.*` はプラグインではなく、その親の extra tree として載る。
 
 ## このディレクトリの起点
 
