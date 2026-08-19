@@ -53,6 +53,45 @@ class DiscoverPluginsTests(unittest.TestCase):
                 " ".join(data["warnings"]),
             )
 
+    def test_plugin_root_with_inspect_tree_is_not_stolen(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            plugin = _mkdir(
+                Path(tmp) / "quay-io-openshift-release-dev-ocp-v4.0-must-gather-sha256-abc"
+            )
+            _mkdir(plugin / "namespaces" / "openshift-etcd")
+            _mkdir(plugin / "cluster-scoped-resources" / "core")
+            inspect = _mkdir(plugin / "inspect.local.111" / "namespaces" / "openshift-cnv")
+            _touch(
+                inspect
+                / "pods"
+                / "virt-operator-0"
+                / "virt-operator"
+                / "virt-operator"
+                / "logs"
+                / "current.log"
+            )
+
+            found = discover_plugins(plugin)
+            self.assertEqual([plugin], found)
+
+            data = build_inventory(plugin)
+            self.assertEqual(len(data["plugins"]), 1)
+            rec = data["plugins"][0]
+            self.assertEqual(rec["dirname"], plugin.name)
+            self.assertEqual(rec["kind"], "ocp-default")
+            self.assertEqual(rec["path"], str(plugin.resolve()))
+            self.assertEqual(
+                rec["namespaces"],
+                ["openshift-cnv", "openshift-etcd"],
+            )
+            self.assertEqual(rec["cluster_scoped"], ["core"])
+            self.assertEqual(
+                rec["extra_namespace_trees"],
+                ["inspect.local.111/namespaces"],
+            )
+            self.assertNotIn("inspect.local.111", rec["dirname"])
+            self.assertEqual(data["skipped_top_level"], [])
+
     def test_empty_wrapper_is_not_treated_as_plugin(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = _mkdir(Path(tmp) / "must-gather.local.12345")
